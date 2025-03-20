@@ -10,5 +10,6 @@
     <orderEntry type="library" name="slf4j.api" level="project" />
     <orderEntry type="library" name="xerial.sqlite.jdbc" level="project" />
     <orderEntry type="library" name="ch.qos.logback.classic" level="project" />
+    <orderEntry type="library" name="mysql.connector.j" level="project" />
   </component>
 </module>

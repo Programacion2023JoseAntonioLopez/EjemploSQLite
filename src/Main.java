@@ -2,185 +2,321 @@ import java.sql.*;
 import java.sql.DriverManager;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Scanner;
 
+/**
+ * Clase principal que demuestra operaciones básicas CRUD sobre una base de datos
+ * SQLite utilizando JDBC. Permite crear una tabla de alumnos, insertar registros,
+ * consultarlos, actualizarlos y eliminarlos.
+ *
+ * La tabla utilizada es Alumno con los campos:
+ * id, nombre, email y telefono.
+ */
 public class Main {
-    // SqlLite
-    static final String URL_SQLITE = "jdbc:sqlite:alumnos.db"; // Define la URL para la conexión a la base de datos SQLite
 
-    // MySql
-    static final String user = "usuario"; // Define el nombre de usuario para la conexión a MySQL
-    static final String password = "12345678"; // Define la contraseña para la conexión a MySQL
-    static final String URL_MYSQL = "jdbc:mysql://192.168.18.50:3366/alumnodb"; // Define la URL para la conexión a la base de datos MySQL
-    static final String DB_MYSQL = "CREATE TABLE IF NOT EXISTS Alumno (\n" + // Define la sentencia SQL para crear la tabla Alumno en MySQL
-            "    id INT AUTO_INCREMENT PRIMARY KEY,\n" +
-            "    nombre VARCHAR(255) NOT NULL,\n" +
-            "    email VARCHAR(255),\n" +
-            "    telefono VARCHAR(20)\n" +
-            ");";
+    /**
+     * URL de conexión a la base de datos SQLite.
+     */
+    static final String URL_SQLITE = "jdbc:sqlite:alumnos.db";
 
-    static final String DB_SQLITE = "CREATE TABLE IF NOT EXISTS Alumno (" + // Define la sentencia SQL para crear la tabla Alumno en SQLite
+    /**
+     * Sentencia SQL para crear la tabla Alumno en SQLite si no existe.
+     */
+    static final String DB_SQLITE = "CREATE TABLE IF NOT EXISTS Alumno (" +
             "id INTEGER PRIMARY KEY AUTOINCREMENT," +
             "nombre TEXT NOT NULL," +
             "email TEXT," +
             "telefono TEXT)";
 
-    // Método para crear la tabla Alumno si no existe
+    /**
+     * Crea la tabla Alumno en la base de datos si no existe.
+     *
+     * @param conexion conexión activa a la base de datos
+     * @throws SQLException si ocurre un error al ejecutar la sentencia SQL
+     */
     private static void crearTabla(Connection conexion) throws SQLException {
-        try (Statement statement = conexion.createStatement()) { // Crea un objeto Statement para ejecutar sentencias SQL
-            statement.executeUpdate(DB_SQLITE); // Ejecuta la sentencia SQL para crear la tabla (usando la definición de SQLite en este caso)
-            System.out.println("Tabla Alumno creada correctamente."); // Imprime un mensaje de éxito
+        try (Statement statement = conexion.createStatement()) {
+            statement.executeUpdate(DB_SQLITE);
+            System.out.println("Tabla Alumno creada correctamente.");
         }
     }
 
-    // Método para actualizar un registro de alumno
+    /**
+     * Actualiza los datos de un alumno existente.
+     *
+     * @param conexion conexión a la base de datos
+     * @param id identificador del alumno a actualizar
+     * @param nombre nuevo nombre del alumno
+     * @param email nuevo email del alumno
+     * @param telefono nuevo teléfono del alumno
+     * @throws SQLException si ocurre un error durante la actualización
+     */
     private static void actualizarAlumno(Connection conexion, int id, String nombre, String email, String telefono) throws SQLException {
-        String query = "UPDATE Alumno SET nombre = ?, email = ?, telefono = ? WHERE id = ?"; // Define la sentencia SQL para actualizar un registro
 
-        try (PreparedStatement statement = conexion.prepareStatement(query)) { // Crea un objeto PreparedStatement para ejecutar sentencias parametrizadas
-            //incluimos los parámetros
-            statement.setString(1, nombre); // Establece el valor del parámetro 1 (nombre)
-            statement.setString(2, email); // Establece el valor del parámetro 2 (email)
-            statement.setString(3, telefono); // Establece el valor del parámetro 3 (telefono)
-            statement.setInt(4, id); // Establece el valor del parámetro 4 (id)
-            //lanzamos la sentencia
-            int rowsAffected = statement.executeUpdate(); // Ejecuta la sentencia SQL y obtiene el número de filas afectadas
-            //podemos saber las tuplas afectadas
-            if (rowsAffected > 0) { // Si se actualizó al menos una fila
-                System.out.println("Registro de alumno actualizado correctamente."); // Imprime un mensaje de éxito
-            } else { // Si no se encontró ningún registro con el ID proporcionado
-                System.out.println("No se encontró ningún registro de alumno con el ID proporcionado."); // Imprime un mensaje de error
+        String query = "UPDATE Alumno SET nombre = ?, email = ?, telefono = ? WHERE id = ?";
+
+        try (PreparedStatement statement = conexion.prepareStatement(query)) {
+
+            statement.setString(1, nombre);
+            statement.setString(2, email);
+            statement.setString(3, telefono);
+            statement.setInt(4, id);
+
+            int rowsAffected = statement.executeUpdate();
+
+            if (rowsAffected > 0) {
+                System.out.println("Registro de alumno actualizado correctamente.");
+            } else {
+                System.out.println("No se encontró ningún registro de alumno con el ID proporcionado.");
             }
         }
     }
 
-    // Método para obtener una lista de todos los alumnos
+    /**
+     * Obtiene una lista con todos los alumnos almacenados en la base de datos.
+     *
+     * @param conexion conexión activa a la base de datos
+     * @return lista de objetos {@link Alumno}
+     * @throws SQLException si ocurre un error durante la consulta
+     */
     private static List<Alumno> listaAlumnos(Connection conexion) throws SQLException {
-        List<Alumno> listaAlumnos = new ArrayList<>(); // Crea una lista para almacenar los objetos Alumno
 
-        try (Statement statement = conexion.createStatement(); // Crea un objeto Statement para ejecutar sentencias SQL
-             ResultSet resultSet = statement.executeQuery("SELECT * FROM Alumno")) { // Ejecuta la sentencia SQL y obtiene un ResultSet con los resultados
-            while (resultSet.next()) { // Itera sobre los resultados
-                int id = resultSet.getInt("id"); // Obtiene el valor de la columna id
-                String nombre = resultSet.getString("nombre"); // Obtiene el valor de la columna nombre
-                String email = resultSet.getString("email"); // Obtiene el valor de la columna email
-                String telefono = resultSet.getString("telefono"); // Obtiene el valor de la columna telefono
+        List<Alumno> listaAlumnos = new ArrayList<>();
 
-                // Creamos un objeto Alumno y lo agregamos a la lista
-                Alumno alumno = new Alumno(id, nombre, email, telefono); // Crea un objeto Alumno con los valores obtenidos
-                listaAlumnos.add(alumno); // Agrega el objeto Alumno a la lista
+        try (Statement statement = conexion.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT * FROM Alumno")) {
+
+            while (resultSet.next()) {
+
+                int id = resultSet.getInt("id");
+                String nombre = resultSet.getString("nombre");
+                String email = resultSet.getString("email");
+                String telefono = resultSet.getString("telefono");
+
+                Alumno alumno = new Alumno(id, nombre, email, telefono);
+                listaAlumnos.add(alumno);
             }
         }
-        return listaAlumnos; // Devuelve la lista de alumnos
+
+        return listaAlumnos;
     }
 
-    // Método para eliminar un registro de alumno por ID
+    /**
+     * Elimina un alumno de la base de datos utilizando su ID.
+     *
+     * @param conexion conexión a la base de datos
+     * @param id identificador del alumno a eliminar
+     * @throws SQLException si ocurre un error durante la eliminación
+     */
     private static void borrarAlumno(Connection conexion, int id) throws SQLException {
-        String query = "DELETE FROM Alumno WHERE id = ?"; // Define la sentencia SQL para eliminar un registro
 
-        try (PreparedStatement statement = conexion.prepareStatement(query)) { // Crea un objeto PreparedStatement para ejecutar sentencias parametrizadas
-            statement.setInt(1, id); // Establece el valor del parámetro 1 (id)
-            statement.executeUpdate(); // Ejecuta la sentencia SQL
-            System.out.println("Alumno con ID " + id + " eliminado correctamente."); // Imprime un mensaje de éxito
+        String query = "DELETE FROM Alumno WHERE id = ?";
+
+        try (PreparedStatement statement = conexion.prepareStatement(query)) {
+
+            statement.setInt(1, id);
+            statement.executeUpdate();
+
+            System.out.println("Alumno con ID " + id + " eliminado correctamente.");
         }
     }
+    /**
+     * Elimina todos los alumnos de la tabla Alumno.
+     *
+     * @param conexion conexión activa a la base de datos
+     * @throws SQLException si ocurre un error durante la ejecución de la sentencia SQL
+     */
+    private static void borrarTodosAlumnos(Connection conexion) throws SQLException {
+        String query = "DELETE FROM Alumno";
 
-    // Método para consultar todos los alumnos e imprimir sus datos
+        try (Statement statement = conexion.createStatement()) {
+            int filasBorradas = statement.executeUpdate(query);
+
+            System.out.println("Se han eliminado " + filasBorradas + " alumnos de la base de datos.");
+        }
+    }
+    /**
+     * Consulta todos los alumnos de la base de datos y muestra sus datos por consola.
+     *
+     * @param conexion conexión activa a la base de datos
+     * @throws SQLException si ocurre un error durante la consulta
+     */
     private static void consultarAlumnos(Connection conexion) throws SQLException {
-        try (Statement statement = conexion.createStatement(); // Crea un objeto Statement para ejecutar sentencias SQL
-             ResultSet resultSet = statement.executeQuery("SELECT * FROM Alumno")) { // Ejecuta la sentencia SQL y obtiene un ResultSet con los resultados
-            while (resultSet.next()) { // Itera sobre los resultados
-                System.out.println("ID: " + resultSet.getInt("id") + // Imprime el ID del alumno
-                        ", Nombre: " + resultSet.getString("nombre") + // Imprime el nombre del alumno
-                        ", Email: " + resultSet.getString("email") + // Imprime el email del alumno
-                        ", Teléfono: " + resultSet.getString("telefono")); // Imprime el teléfono del alumno
+
+        try (Statement statement = conexion.createStatement();
+             ResultSet resultSet = statement.executeQuery("SELECT * FROM Alumno")) {
+
+            while (resultSet.next()) {
+
+                System.out.println(
+                        "ID: " + resultSet.getInt("id") +
+                                ", Nombre: " + resultSet.getString("nombre") +
+                                ", Email: " + resultSet.getString("email") +
+                                ", Teléfono: " + resultSet.getString("telefono")
+                );
             }
         }
     }
 
-    // Método para consultar alumnos por parte del nombre
+    /**
+     * Consulta alumnos cuyo nombre contenga una cadena determinada.
+     *
+     * @param conexion conexión a la base de datos
+     * @param parteNombre cadena que debe contener el nombre del alumno
+     * @throws SQLException si ocurre un error durante la consulta
+     */
     private static void consultarAlumnosPorNombre(Connection conexion, String parteNombre) throws SQLException {
-        //sentencia parametrizada
-        String query = "SELECT * FROM Alumno WHERE nombre LIKE ?"; // Define la sentencia SQL para buscar alumnos por parte del nombre
-        try (PreparedStatement statement = conexion.prepareStatement(query)) { // Crea un objeto PreparedStatement para ejecutar sentencias parametrizadas
-            //añadimos el parámetro
-            statement.setString(1, "%" + parteNombre + "%"); // Establece el valor del parámetro 1 (parte del nombre)
-            try (ResultSet resultSet = statement.executeQuery()) { // Ejecuta la sentencia SQL y obtiene un ResultSet con los resultados
-                while (resultSet.next()) { // Itera sobre los resultados
-                    System.out.println("ID: " + resultSet.getInt("id") + // Imprime el ID del alumno
-                            ", Nombre: " + resultSet.getString("nombre") + // Imprime el nombre del alumno
-                            ", Email: " + resultSet.getString("email") + // Imprime el email del alumno
-                            ", Teléfono: " + resultSet.getString("telefono")); // Imprime el teléfono del alumno
+
+        String query = "SELECT * FROM Alumno WHERE nombre LIKE ?";
+
+        try (PreparedStatement statement = conexion.prepareStatement(query)) {
+
+            statement.setString(1, "%" + parteNombre + "%");
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    System.out.println(
+                            "ID: " + resultSet.getInt("id") +
+                                    ", Nombre: " + resultSet.getString("nombre") +
+                                    ", Email: " + resultSet.getString("email") +
+                                    ", Teléfono: " + resultSet.getString("telefono")
+                    );
                 }
             }
         }
     }
 
-    // Método para insertar un nuevo alumno
+    /**
+     * Inserta un nuevo alumno en la base de datos.
+     *
+     * @param conexion conexión activa a la base de datos
+     * @param nombre nombre del alumno
+     * @param email correo electrónico del alumno
+     * @param telefono teléfono del alumno
+     * @throws SQLException si ocurre un error durante la inserción
+     */
     private static void insertarAlumno(Connection conexion, String nombre, String email, String telefono) throws SQLException {
-        //Indicamos los parámetros mediante ?
-        String sqlInsert = "INSERT INTO Alumno (nombre, email, telefono) VALUES (?, ?, ?)"; // Define la sentencia SQL para insertar un nuevo alumno
-        try (PreparedStatement statement = conexion.prepareStatement(sqlInsert)) { // Crea un objeto PreparedStatement para ejecutar sentencias parametrizadas
-            //Indicamos los valores a insertar
-            statement.setString(1, nombre); // Establece el valor del parámetro 1 (nombre)
-            statement.setString(2, email); // Establece el valor del parámetro 2 (email)
-            statement.setString(3, telefono); // Establece el valor del parámetro 3 (telefono)
-            //Lanzamos la sentencia SQL
-            statement.executeUpdate(); // Ejecuta la sentencia SQL
-            System.out.println("Alumno '" + nombre + "' insertado correctamente."); // Imprime un mensaje de éxito
+
+        String sqlInsert = "INSERT INTO Alumno (nombre, email, telefono) VALUES (?, ?, ?)";
+
+        try (PreparedStatement statement = conexion.prepareStatement(sqlInsert)) {
+
+            statement.setString(1, nombre);
+            statement.setString(2, email);
+            statement.setString(3, telefono);
+
+            statement.executeUpdate();
+
+            System.out.println("Alumno '" + nombre + "' insertado correctamente.");
         }
     }
+    /**
+     * Obtiene una lista de alumnos cuyo nombre comienza por una letra determinada.
+     *
+     * Realiza una consulta SQL sobre la tabla {@code Alumno} utilizando la cláusula
+     * {@code LIKE} para filtrar los nombres que comienzan por la letra indicada.
+     * El resultado se transforma en objetos {@link Alumno} que se almacenan en una lista.
+     *
+     * @param conexion conexión activa a la base de datos
+     * @param letra letra inicial por la que debe comenzar el nombre del alumno
+     * @return una {@link ArrayList} con los alumnos cuyo nombre empieza por la letra indicada.
+     *         Si no hay coincidencias, devuelve una lista vacía.
+     * @throws SQLException si ocurre algún error durante la ejecución de la consulta SQL
+     */
+    private static ArrayList<Alumno> obtenerAlumnosPorInicial(Connection conexion, String letra) throws SQLException {
 
+        ArrayList<Alumno> listaAlumnos = new ArrayList<>();
 
+        String query = "SELECT * FROM Alumno WHERE nombre LIKE ?";
+
+        try (PreparedStatement statement = conexion.prepareStatement(query)) {
+            // la letra indicada al inicio
+            statement.setString(1, letra + "%");
+
+            try (ResultSet resultSet = statement.executeQuery()) {
+
+                while (resultSet.next()) {
+
+                    int id = resultSet.getInt("id");
+                    String nombre = resultSet.getString("nombre");
+                    String email = resultSet.getString("email");
+                    String telefono = resultSet.getString("telefono");
+
+                    Alumno alumno = new Alumno(id, nombre, email, telefono);
+                    listaAlumnos.add(alumno);
+                }
+            }
+        }
+
+        return listaAlumnos;
+    }
+    /**
+     * Método principal del programa.
+     * Establece la conexión con la base de datos, crea la tabla si no existe
+     * y ejecuta varias operaciones de ejemplo: inserción, consulta y actualización.
+     *
+     * @param args argumentos de la línea de comandos
+     */
     public static void main(String[] args) {
-        Connection conexion = null;
 
-        try {
-            //SqlLite
-            conexion = DriverManager.getConnection(URL_SQLITE);
-            //MySql
-            //conexion = DriverManager.getConnection(URL_MYSQL,user,password);
-            //creamos la tabla si no existe
+        try (
+                Connection conexion = DriverManager.getConnection(URL_SQLITE);
+                Scanner sc = new Scanner(System.in)
+        ) {
+
+            // Crear tabla si no existe
             crearTabla(conexion);
-            // Insertamos algunos alumnos
-            insertarAlumno(conexion, "Juan Pérez", "juan@example.com", "123456789");
-            insertarAlumno(conexion, "María López", "maria@example.com", "987654321");
-            insertarAlumno(conexion, "Carlos García", "carlos@example.com", "555555555");
-            insertarAlumno(conexion, "Laura Martínez", "laura@example.com", "777777777");
-            insertarAlumno(conexion, "Andrea Pérez", "andrea@example.com", "999999999");
 
-            //Buscamos los alumnos actuales
-            System.out.println("Alumnos:");
+            // Preguntar si se quieren borrar todos los alumnos
+            System.out.print("¿Quieres borrar todos los alumnos? (s/n): ");
+            String borrar = sc.nextLine();
+
+            if (borrar.equalsIgnoreCase("s")) {
+                borrarTodosAlumnos(conexion);
+            }
+
+            // Preguntar si se quieren insertar alumnos de ejemplo
+            System.out.print("¿Quieres insertar alumnos de ejemplo? (s/n): ");
+            String insertar = sc.nextLine();
+
+            if (insertar.equalsIgnoreCase("s")) {
+                insertarAlumno(conexion, "Juan Pérez", "juan@example.com", "123456789");
+                insertarAlumno(conexion, "María López", "maria@example.com", "987654321");
+                insertarAlumno(conexion, "Carlos García", "carlos@example.com", "555555555");
+                insertarAlumno(conexion, "Laura Martínez", "laura@example.com", "777777777");
+                insertarAlumno(conexion, "Andrea Pérez", "andrea@example.com", "999999999");
+            }
+
+            // Mostrar alumnos actuales
+            System.out.println("\nLista de alumnos:");
             consultarAlumnos(conexion);
 
-            //Buscamos los alumnos con nombre que contiene 'Alumno'
-            System.out.println("Alumnos con nombre que contiene Pérez:");
+            // Buscar alumnos por nombre
+            System.out.println("\nAlumnos con nombre que contiene 'Pérez':");
             consultarAlumnosPorNombre(conexion, "Pérez");
 
-            //Actualizamos el alumno con id 1
-            System.out.println("Actualizar 1");
-            int idAlumno = 1;
-            String nuevoNombre = "Juanito Pérez";
-            String nuevoEmail = "juan@example.com";
-            String nuevoTelefono = "555-1234";
-
-            // Llamamos al método para actualizar el alumno
-            actualizarAlumno(conexion, idAlumno, nuevoNombre, nuevoEmail, nuevoTelefono);
-            consultarAlumnosPorNombre(conexion,"Juan");
-
-            //Recuperamos los alumnos en una Lista
-            System.out.println("Lista de alumnos:");
+            // Recuperar alumnos en una lista
+            System.out.println("\nLista de alumnos:");
             List<Alumno> alumnos = listaAlumnos(conexion);
             alumnos.forEach(System.out::println);
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {//Esta sentencia simpre se ejecuta. Hay que cerrar la conexión
-            try {
-                if (conexion != null) {
-                    conexion.close();
-                }
-            } catch (SQLException e) {
-                e.printStackTrace();
+
+            // Buscar alumnos cuya inicial sea "A"
+            System.out.println("\nAlumnos cuyo nombre empieza por 'A':");
+
+            ArrayList<Alumno> alumnosA = obtenerAlumnosPorInicial(conexion, "A");
+
+            // Mostrar resultados
+            if (alumnosA.isEmpty()) {
+                System.out.println("No se encontraron alumnos con esa inicial.");
+            } else {
+                alumnosA.forEach(System.out::println);
             }
+
+        } catch (SQLException e) {
+            System.err.println("Error al trabajar con la base de datos:");
+            e.printStackTrace();
         }
     }
 }
